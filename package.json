@@ -1,0 +1,19 @@
+{
+  "name": "dcard-sex-push",
+  "version": "1.0.0",
+  "description": ":D",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/infixman/dcardsexpush.git"
+  },
+  "author": "esnchg",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/infixman/dcardsexpush/issues"
+  },
+  "homepage": "https://github.com/infixman/dcardsexpush#readme"
+}
