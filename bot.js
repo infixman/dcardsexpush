@@ -68,7 +68,7 @@ ${postContent.content}
 原文 [${urlPost}${postContent.id}](${urlPost}${postContent.id})`;
                     
     console.log('push msg: ', msg, ', to channel: ', channelName);
-    bot.sendMessage(channelName, msg,  {parse_mode : "Markdown"});
+    bot.sendMessage(channelName, msg,  {parse_mode : "Markdown", disable_web_page_preview: true});
 
     if (postContent.mediaMeta.length > 0) {
         let mediaGroup = [];
