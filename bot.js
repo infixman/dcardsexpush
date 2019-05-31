@@ -1,5 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const schedule = require('node-schedule');
+//const doJobWhen = [0,10,20,30,40,50];
+const doJobWhen = [0,30];
 const util = require('util');
 const request = require('request');
 const requestPromise = util.promisify(request);
@@ -13,9 +15,9 @@ const bot = new TelegramBot(token, {polling: true});
 
 let _latestId = 0;
 
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
     console.log('reseve message:', msg.text);
-    if (msg.text.startsWith('/SetId ') && msg.from.username === adminUserName) {
+    if (msg.text.toLowerCase().startsWith('/setid ') && msg.from.username === adminUserName) {
         let id = msg.text.split(' ')[1];
         var parsed = parseInt(id, 10);
         if (isNaN(parsed)) {
@@ -27,7 +29,7 @@ bot.on('message', (msg) => {
         }
     }
     else {
-        bot.sendMessage(msg.chat.id, `hi ${msg.from.username}, you say: ${msg.text}`);
+        await bot.sendMessage(msg.chat.id, `hi ${msg.from.username}, you say: ${msg.text}`);
     }
 });
 
@@ -38,7 +40,7 @@ function start() {
     console.log('app satrt');
 
     let rule = new schedule.RecurrenceRule();
-    rule.second = [0, 30];
+    rule.second = doJobWhen;
 
     let job = schedule.scheduleJob(rule, async function() {
         console.log(`job: ${(new Date()).toLocaleTimeString()}`)
@@ -54,51 +56,73 @@ function start() {
             
             let postContent = await getPostContent(postList[i].id);
             if (postContent.id > _latestId) {
-                sendMessage(postContent)
+                await sendMessage(postContent)
                 _latestId = postContent.id;
             }
         }
     });
 }
 
-function sendMessage(postContent) {
-    let msg = `*${postContent.title}*
+async function sendMessage(postContent) {
+    let url = urlPost + postContent.id;
+    let msg = `<b>${postContent.title}</b>
 ${postContent.content}
 
-原文 [${urlPost}${postContent.id}](${urlPost}${postContent.id})`;
+原文 <a href="${url}">${url}</a>`;
                     
     console.log('push msg: ', msg, ', to channel: ', channelName);
-    bot.sendMessage(channelName, msg,  {parse_mode : "Markdown", disable_web_page_preview: true});
 
+    let mediaMsgId = 0;
     if (postContent.mediaMeta.length > 0) {
-        let mediaGroup = [];
-        let latestImgUrl = '';
-        for(let j=0; j<postContent.mediaMeta.length; j++) {
-            let media = postContent.mediaMeta[j];
-            if (media.normalizedUrl && media.type.startsWith('image')) {
-                mediaGroup.push({
-                    type: 'photo',
-                    media: media.normalizedUrl
-                })
-
-                latestImgUrl = media.normalizedUrl;
-
-                //group limit is 2 ~ 10; 1 is not group
-                if (mediaGroup.length == 10) {
-                    bot.sendMediaGroup(channelName, mediaGroup);
-                    mediaGroup = [];
-                }
+        let flag = [];
+        let output =[];
+        for (let i=0; i<postContent.mediaMeta.length; i++) {
+            let tmp = postContent.mediaMeta[i]
+            if (tmp.normalizedUrl && tmp.type.startsWith('image')) {
+                if (flag[tmp.normalizedUrl])
+                    continue;
+                flag[tmp.normalizedUrl] = true;
+                output.push(tmp);
             }
         }
 
-        //not enough 10
+        let mediaGroup = [];
+        let latestImgUrl = '';
+        let mediaMsg;
+
+        for(let j=0; j<output.length; j++) {
+            latestImgUrl = output[j].normalizedUrl;
+
+            mediaGroup.push({
+                type: 'photo',
+                media: latestImgUrl
+            })
+
+            //group limit is 2 ~ 10
+            if (mediaGroup.length == 10) {
+                mediaMsg = await bot.sendMediaGroup(channelName, mediaGroup);
+                mediaGroup = [];
+            }
+        }
+
+        //not enough 10        
         if (mediaGroup.length == 1) {
-            latestImgUrl
-            bot.sendPhoto(channelName, latestImgUrl);
+            //1 is not group, use sendPhoto
+            mediaMsg = await bot.sendPhoto(channelName, latestImgUrl);
         }
         else if (mediaGroup.length > 1) {
-            bot.sendMediaGroup(channelName, mediaGroup);
+            mediaMsg = await bot.sendMediaGroup(channelName, mediaGroup);
         }
+
+        if (mediaMsg) {
+            mediaMsgId = mediaMsg.message_id;
+        }
+    }
+    if (mediaMsgId != 0) {
+        await bot.sendMessage(channelName, msg,  {parse_mode : "HTML", disable_web_page_preview: true, reply_to_message_id: mediaMsgId});
+    }
+    else {
+        await bot.sendMessage(channelName, msg,  {parse_mode : "HTML", disable_web_page_preview: true});
     }
 }
 
