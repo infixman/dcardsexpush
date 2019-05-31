@@ -62,7 +62,8 @@ function start() {
 }
 
 function sendMessage(postContent) {
-    let msg = `${postContent.excerpt}
+    let msg = `**${postContent.title}**
+${postContent.content}
 
 原文 [${urlPost}${postContent.id}](${urlPost}${postContent.id})`;
                     
