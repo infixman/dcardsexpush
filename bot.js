@@ -31,6 +31,7 @@ bot.on('message', (msg) => {
     }
 });
 
+start();
 
 function start() {
 
@@ -68,19 +69,20 @@ function sendMessage(postContent) {
     console.log('push msg: ', msg, ', to channel: ', channelName);
     bot.sendMessage(channelName, msg,  {parse_mode : "Markdown"});
 
-    if (postContent.media.length > 0) {
+    if (postContent.mediaMeta.length > 0) {
         let mediaGroup = [];
         let latestImgUrl = '';
-        for(let j=0; j<postContent.media.length; j++) {
-            if (postContent.media[j].url) {
+        for(let j=0; j<postContent.mediaMeta.length; j++) {
+            let media = postContent.mediaMeta[j];
+            if (media.normalizedUrl && media.type.startsWith('image')) {
                 mediaGroup.push({
                     type: 'photo',
-                    media: postContent.media[j].url
+                    media: media.normalizedUrl
                 })
 
-                latestImgUrl = postContent.media[j].url;
+                latestImgUrl = media.normalizedUrl;
 
-                //group limit is 10
+                //group limit is 2 ~ 10; 1 is not group
                 if (mediaGroup.length == 10) {
                     bot.sendMediaGroup(channelName, mediaGroup);
                     mediaGroup = [];
@@ -150,5 +152,3 @@ function getHeader() {
     //     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36'
     // };
 }
-
-start();
